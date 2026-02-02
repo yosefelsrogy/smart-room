@@ -25,6 +25,7 @@
     <div id="devices-container"></div>
 
 <script>
+    // استخدام الـ API Key الذي استخرجته في صورتك السابقة
     const API_KEY = "1c208e5d-af4d-4354-9e21-f75242e3fde8"; 
 
     const devices = [
@@ -33,7 +34,9 @@
         { id: '697989de40cb098d90c7aad7', name: 'اللمبة الثالثة' }
     ];
 
-    // دالة إنشاء الواجهة
+    // رابط البروكسي لتجاوز حظر المتصفح (CORS)
+    const PROXY = "https://corsproxy.io/?";
+
     function renderDevices() {
         const container = document.getElementById('devices-container');
         container.innerHTML = devices.map(dev => `
@@ -48,7 +51,6 @@
         `).join('');
     }
 
-    // دالة تحديث الألوان والنصوص
     function updateUI(deviceId, state) {
         const ind = document.getElementById(`ind-${deviceId}`);
         const txt = document.getElementById(`status-${deviceId}`);
@@ -67,7 +69,9 @@
 
     async function sendAction(deviceId, value) {
         try {
-            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
+            // إضافة البروكسي قبل الرابط الأصلي
+            const url = PROXY + encodeURIComponent(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`);
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -82,16 +86,17 @@
             if (response.ok) {
                 updateUI(deviceId, value);
             } else {
-                alert("السيرفر رفض الطلب: " + response.status);
+                alert("السيرفر رفض الطلب. كود: " + response.status);
             }
         } catch (err) {
-            alert("فشل الاتصال: جرب متصفح الموبايل أو متصفح خفي");
+            alert("فشل الاتصال. جرب متصفح الموبايل.");
         }
     }
 
     async function getStatus(deviceId) {
         try {
-            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}`, {
+            const url = PROXY + encodeURIComponent(`https://api.sinric.pro/api/v1/devices/${deviceId}`);
+            const response = await fetch(url, {
                 headers: { 'x-sinric-api-key': API_KEY }
             });
             const data = await response.json();
@@ -99,14 +104,12 @@
                 updateUI(deviceId, data.payload.state.powerState);
             }
         } catch (err) {
-            console.error("خطأ في جلب الحالة", err);
+            console.error("Status error", err);
         }
     }
 
-    // تشغيل التطبيق
     renderDevices();
     devices.forEach(d => getStatus(d.id));
-    // تحديث تلقائي كل 15 ثانية
     setInterval(() => devices.forEach(d => getStatus(d.id)), 15000);
 </script>
 </body>
