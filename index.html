@@ -35,29 +35,34 @@
     ];
 
     // دالة إرسال الأوامر - مباشرة بدون بروكسي
-    async function sendAction(deviceId, value) {
-        try {
-            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-sinric-api-key': API_KEY 
-                },
-                body: JSON.stringify({ 
-                    "action": "setPowerState", 
-                    "value": { "state": value } 
-                })
-            });
+  async function sendAction(deviceId, value) {
+    try {
+        const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-sinric-api-key': API_KEY 
+            },
+            body: JSON.stringify({ 
+                "action": "setPowerState", 
+                "value": { 
+                    "state": value.toLowerCase() // السيرفر أحياناً يطلب 'on' وليس 'On'
+                } 
+            })
+        });
 
-            if (response.ok) {
-                updateUI(deviceId, value);
-            } else {
-                alert("السيرفر رفض الطلب: " + response.status);
-            }
-        } catch (err) {
-            alert("تأكد من تفعيل إضافة Allow CORS في المتصفح");
+        if (response.ok) {
+            updateUI(deviceId, value);
+        } else {
+            // سيطبع لك تفاصيل الخطأ في الـ Console إذا تكرر
+            const errorBody = await response.json();
+            console.error("Error Detail:", errorBody);
+            alert("السيرفر رفض الطلب: " + response.status);
         }
+    } catch (err) {
+        alert("تأكد من تفعيل إضافة CORS");
     }
+}
 
     // دالة جلب الحالة - مباشرة بدون بروكسي
     async function getStatus(deviceId) {
@@ -109,4 +114,5 @@
 </script>
 </body>
 </html>
+
 
