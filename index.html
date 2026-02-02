@@ -25,7 +25,7 @@
     <div id="devices-container"></div>
 
 <script>
-    // استخدم مفتاح الـ API الخاص بك
+    // استخدم الـ API Key الخاص بك
     const API_KEY = "1c208e5d-af4d-4354-9e21-f75242e3fde8"; 
 
     const devices = [
@@ -34,52 +34,54 @@
         { id: '697989de40cb098d90c7aad7', name: 'اللمبة الثالثة' }
     ];
 
-    // دالة إرسال الأوامر - مباشرة بدون بروكسي
-  async function sendAction(deviceId, value) {
-    try {
-        const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-sinric-api-key': API_KEY 
-            },
-            body: JSON.stringify({ 
-                "action": "setPowerState", 
-                "value": { 
-                    "state": value.toLowerCase() // السيرفر أحياناً يطلب 'on' وليس 'On'
-                } 
-            })
-        });
+    async function sendAction(deviceId, value) {
+        // تحويل القيمة لـ lowercase لأن السيرفر يرفض On/Off كحروف كبيرة
+        const stateValue = value.toLowerCase(); 
+        
+        try {
+            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-sinric-api-key': API_KEY 
+                },
+                body: JSON.stringify({ 
+                    "action": "setPowerState", 
+                    "value": { 
+                        "state": stateValue 
+                    } 
+                })
+            });
 
-        if (response.ok) {
-            updateUI(deviceId, value);
-        } else {
-            // سيطبع لك تفاصيل الخطأ في الـ Console إذا تكرر
-            const errorBody = await response.json();
-            console.error("Error Detail:", errorBody);
-            alert("السيرفر رفض الطلب: " + response.status);
+            if (response.ok) {
+                updateUI(deviceId, stateValue);
+            } else {
+                // إذا ظهر 422، سنعرض السبب الدقيق من السيرفر في الـ Console
+                const errData = await response.json();
+                console.log("Server Response:", errData);
+                alert("خطأ من السيرفر: " + response.status);
+            }
+        } catch (err) {
+            alert("تأكد من تفعيل إضافة CORS");
         }
-    } catch (err) {
-        alert("تأكد من تفعيل إضافة CORS");
     }
-}
 
-    // دالة جلب الحالة - مباشرة بدون بروكسي
     async function getStatus(deviceId) {
         try {
             const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}`, {
                 headers: { 'x-sinric-api-key': API_KEY }
             });
             const data = await response.json();
+            // في مكتبة Switch، الحالة تأتي داخل payload.state.powerState
             if (data.payload && data.payload.state) {
-                updateUI(deviceId, data.payload.state.powerState);
+                const state = data.payload.state.powerState || data.payload.state.state;
+                updateUI(deviceId, state);
             }
         } catch (err) {
-            console.error("خطأ في جلب الحالة", err);
+            console.error("Status Error:", err);
         }
     }
 
-    // الدوال المساعدة (تأكد من وجودها في ملفك)
     function renderDevices() {
         const container = document.getElementById('devices-container');
         container.innerHTML = devices.map(dev => `
@@ -87,8 +89,8 @@
                 <h3>${dev.name} <span id="ind-${dev.id}" class="status-indicator off-status"></span></h3>
                 <div class="status-text" id="status-${dev.id}">جاري المزامنة...</div>
                 <div class="btn-group">
-                    <button class="on-btn" onclick="sendAction('${dev.id}', 'On')">تشغيل</button>
-                    <button class="off-btn" onclick="sendAction('${dev.id}', 'Off')">إطفاء</button>
+                    <button class="on-btn" onclick="sendAction('${dev.id}', 'on')">تشغيل</button>
+                    <button class="off-btn" onclick="sendAction('${dev.id}', 'off')">إطفاء</button>
                 </div>
             </div>
         `).join('');
@@ -98,21 +100,16 @@
         const ind = document.getElementById(`ind-${deviceId}`);
         const txt = document.getElementById(`status-${deviceId}`);
         if (!ind || !txt) return;
-        if (state.toLowerCase() === 'on') {
-            ind.className = 'status-indicator on-status';
-            txt.innerText = 'الحالة الحالية: تعمل';
-            txt.style.color = '#22c55e';
-        } else {
-            ind.className = 'status-indicator off-status';
-            txt.innerText = 'الحالة الحالية: مطفأة';
-            txt.style.color = '#ef4444';
-        }
+
+        const isOn = state.toLowerCase() === 'on';
+        ind.className = isOn ? 'status-indicator on-status' : 'status-indicator off-status';
+        txt.innerText = isOn ? 'الحالة الحالية: تعمل' : 'الحالة الحالية: مطفأة';
+        txt.style.color = isOn ? '#22c55e' : '#ef4444';
     }
 
     renderDevices();
+    // جلب الحالة عند التشغيل
     devices.forEach(d => getStatus(d.id));
 </script>
 </body>
 </html>
-
-
