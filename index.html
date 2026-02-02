@@ -23,90 +23,59 @@
 
     <h2>🏠 لوحة التحكم المباشرة</h2>
     <div id="devices-container"></div>
+<script>
+    // استخدم مفتاح الـ API الجديد الذي استخرجته الآن
+    const API_KEY = "1c208e5d-af4d-4354-9e21-f75242e3fde8"; 
 
-    <script>
-        // الـ App Key الخاص بك من Sinric Pro
-        const APP_KEY = "b50f1ba3-62a9-481e-8a36-7675c4edadbc"; 
-        
-        // قائمة الأجهزة
-        const devices = [
-            { id: '697988922c0599192ae83298', name: 'اللمبة الأولى' },
-            { id: '697989702c0599192ae83307', name: 'اللمبة الثانية' },
-            { id: '697989de40cb098d90c7aad7', name: 'اللمبة الثالثة' }
-        ];
+    // قائمة الأجهزة (تأكد أن الـ IDs مطابقة)
+    const devices = [
+        { id: '697988922c0599192ae83298', name: 'اللمبة الأولى' },
+        { id: '697989702c0599192ae83307', name: 'اللمبة الثانية' },
+        { id: '697989de40cb098d90c7aad7', name: 'اللمبة الثالثة' }
+    ];
 
-        function renderDevices() {
-            const container = document.getElementById('devices-container');
-            container.innerHTML = devices.map(dev => `
-                <div class="card" id="card-${dev.id}">
-                    <h3>${dev.name} <span id="ind-${dev.id}" class="status-indicator off-status"></span></h3>
-                    <div class="status-text" id="status-${dev.id}">جاري المزامنة...</div>
-                    <div class="btn-group">
-                        <button class="on-btn" onclick="sendAction('${dev.id}', 'On')">تشغيل</button>
-                        <button class="off-btn" onclick="sendAction('${dev.id}', 'Off')">إطفاء</button>
-                    </div>
-                </div>
-            `).join('');
-        }
+    // دالة إرسال الأوامر (معدلة لتناسب الـ API Key)
+    async function sendAction(deviceId, value) {
+        try {
+            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-sinric-api-key': API_KEY // لاحظ التغيير هنا لـ api-key
+                },
+                body: JSON.stringify({ 
+                    "action": "setPowerState", 
+                    "value": { "state": value } 
+                })
+            });
 
-        async function getStatus(deviceId) {
-            try {
-                const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}`, {
-                    headers: { 'x-sinric-appkey': APP_KEY }
-                });
-                const data = await response.json();
-                if (data.payload && data.payload.state) {
-                    updateUI(deviceId, data.payload.state.powerState);
-                }
-            } catch (err) {
-                console.error("Status error", err);
-            }
-        }
-
-        function updateUI(deviceId, state) {
-            const ind = document.getElementById(`ind-${deviceId}`);
-            const txt = document.getElementById(`status-${deviceId}`);
-            if (state.toLowerCase() === 'on') {
-                ind.className = 'status-indicator on-status';
-                txt.innerText = 'الحالة الحالية: تعمل';
-                txt.style.color = '#22c55e';
+            if (response.ok) {
+                updateUI(deviceId, value);
             } else {
-                ind.className = 'status-indicator off-status';
-                txt.innerText = 'الحالة الحالية: مطفأة';
-                txt.style.color = '#ef4444';
+                alert("السيرفر رفض الطلب: " + response.status);
             }
+        } catch (err) {
+            alert("فشل الاتصال: جرب متصفح الموبايل أو متصفح خفي");
         }
+    }
 
-        async function sendAction(deviceId, value) {
-            try {
-                const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}/action`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'x-sinric-appkey': APP_KEY 
-                    },
-                    body: JSON.stringify({ 
-                        "action": "setPowerState", 
-                        "value": { "state": value } 
-                    })
-                });
-
-                if (response.ok) {
-                    updateUI(deviceId, value);
-                } else {
-                    alert("خطأ من السيرفر: " + response.status);
-                }
-            } catch (err) {
-                console.error("Fetch error", err);
-                alert("فشل الاتصال: تأكد من الإنترنت");
+    // دالة جلب الحالة (معدلة لتناسب الـ API Key)
+    async function getStatus(deviceId) {
+        try {
+            const response = await fetch(`https://api.sinric.pro/api/v1/devices/${deviceId}`, {
+                headers: { 'x-sinric-api-key': API_KEY }
+            });
+            const data = await response.json();
+            if (data.payload && data.payload.state) {
+                updateUI(deviceId, data.payload.state.powerState);
             }
+        } catch (err) {
+            console.error("خطأ في جلب الحالة", err);
         }
+    }
 
-        // تشغيل الوظائف
-        renderDevices();
-        devices.forEach(d => getStatus(d.id));
-        // تحديث الحالة كل 15 ثانية لتجنب الحظر
-        setInterval(() => devices.forEach(d => getStatus(d.id)), 15000);
-    </script>
+    // بقية الدوال (renderDevices و updateUI) تظل كما هي
+</script>
 </body>
 </html>
+
