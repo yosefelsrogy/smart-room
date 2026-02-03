@@ -104,7 +104,7 @@
 
         window.sendCommand = async function(device, state) {
             try {
-                await set(ref(database, `/commands/${device}`), state);
+                await set(ref(database, `/${device}`), state);
                 updateStatus(`✓ ${device} → ${state ? 'ON' : 'OFF'}`, 'connected');
             } catch (error) {
                 updateStatus(`✗ Error: ${error.message}`, 'error');
@@ -164,3 +164,4 @@
     </script>
 </body>
 </html>
+
