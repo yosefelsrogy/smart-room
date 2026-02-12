@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32 Remote Control</title>
     <style>
-        /* التنسيقات الخاصة بك كما هي */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;
@@ -47,7 +46,6 @@
     </div>
 
     <script type="module">
-        // استيراد المكتبات بشكل صحيح للمتصفح
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -61,11 +59,10 @@
             appId: "1:319055560802:web:acd053f81ff5a8e1d3d13b"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        let deviceStates = { lamp1: false, lamp2: false, lamp3: false, lamp4: false, door: false };
+        let deviceStates = { lamp1: false, lamp2: false, lamp3: false, door: false };
 
         function renderUI() {
             const content = document.getElementById('content');
@@ -84,11 +81,6 @@
                     <div class="device-label">💡 Lamp 3 <span class="state-indicator ${deviceStates.lamp3 ? 'on' : ''}" id="ind-lamp3"></span></div>
                     <button class="btn-on" onclick="window.sendCommand('lamp3', true)">ON</button>
                     <button class="btn-off" onclick="window.sendCommand('lamp3', false)">OFF</button>
-                </div>
-                <div class="device-block">
-                    <div class="device-label">💡 Lamp 4 <span class="state-indicator ${deviceStates.lamp4 ? 'on' : ''}" id="ind-lamp4"></span></div>
-                    <button class="btn-on" onclick="window.sendCommand('lamp4', true)">ON</button>
-                    <button class="btn-off" onclick="window.sendCommand('lamp4', false)">OFF</button>
                 </div>
                 <div class="door-section">
                     <div class="device-label">🚪 Door Lock <span class="state-indicator ${deviceStates.door ? 'on' : ''}" id="ind-door"></span></div>
@@ -112,11 +104,13 @@
         };
 
         window.turnOffAll = async function() {
-            if (!confirm('Are you sure?')) return;
+            if (!confirm('Are you sure you want to turn off all devices?')) return;
             try {
-                await set(ref(database, '/commands'), {
-                    lamp1: false, lamp2: false, lamp3: false, lamp4: false, door: false, all_off: true
-                });
+                await set(ref(database, '/commands/all_off'), true);
+                await set(ref(database, '/lamp1'), false);
+                await set(ref(database, '/lamp2'), false);
+                await set(ref(database, '/lamp3'), false);
+                await set(ref(database, '/door'), false);
                 updateStatus('✓ All devices turned OFF', 'connected');
             } catch (error) {
                 updateStatus(`✗ Error: ${error.message}`, 'error');
@@ -132,24 +126,16 @@
         }
 
         function listenForUpdates() {
-            onValue(ref(database, '/status'), (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    deviceStates = {
-                        lamp1: data.lamp1 || false,
-                        lamp2: data.lamp2 || false,
-                        lamp3: data.lamp3 || false,
-                        lamp4: data.lamp4 || false,
-                        door: data.door || false
-                    };
+            ['lamp1', 'lamp2', 'lamp3', 'door'].forEach(device => {
+                onValue(ref(database, `/${device}`), (snapshot) => {
+                    deviceStates[device] = snapshot.val() || false;
                     updateIndicators();
-                }
+                });
             });
         }
 
         function updateIndicators() {
-            const devices = ['lamp1', 'lamp2', 'lamp3', 'lamp4', 'door'];
-            devices.forEach(device => {
+            ['lamp1', 'lamp2', 'lamp3', 'door'].forEach(device => {
                 const indicator = document.getElementById(`ind-${device}`);
                 if (indicator) {
                     deviceStates[device] ? indicator.classList.add('on') : indicator.classList.remove('on');
@@ -157,11 +143,9 @@
             });
         }
 
-        // تشغيل النظام
         renderUI();
         listenForUpdates();
         updateStatus('🌐 Connected to Firebase', 'connected');
     </script>
 </body>
 </html>
-
